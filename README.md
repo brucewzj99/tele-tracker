@@ -39,10 +39,11 @@ python3 main.py
 
 /cancel - To cancel previous conversation with bot
 
-## Pending feature
+## Planned Features
 1. More options for /addothers
-2. Use webhook instead of polling
-3. Host onto serverless function
+2. Retrieve your last few transaction
+4. Use webhook instead of polling
+5. Host onto serverless function
 
 ## Contributing
 
