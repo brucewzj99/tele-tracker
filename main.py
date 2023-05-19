@@ -402,8 +402,8 @@ async def log_transaction(user_data, update):
 
     # tracker data
     day_tracker = int(trackers[0])
-    transport_row_tracker = int(trackers[1])
-    other_row_tracker = int(trackers[2])
+    other_row_tracker = int(trackers[1])
+    transport_row_tracker = int(trackers[2])
     first_row = int(trackers[3])
 
     # user input data
@@ -469,6 +469,7 @@ async def add_transport(update: Update, context: ContextTypes.DEFAULT_TYPE):
     setting_list = google_sheet.get_quick_add_settings(context.user_data["sheet_id"], EntryType.TRANSPORT)
     if setting_list is None or setting_list[0] is None:
         await update.message.reply_text('You have not set up your quick add settings for transport yet, please do so by typing /config')
+        return ConversationHandler.END
     else:
         context.user_data['payment'] = setting_list[0]      
         context.user_data['category'] = setting_list[1]
@@ -485,6 +486,7 @@ async def add_others(update: Update, context: ContextTypes.DEFAULT_TYPE):
     setting_list = google_sheet.get_quick_add_settings(context.user_data["sheet_id"], EntryType.OTHERS)
     if setting_list is None or setting_list[0] is None:
         await update.message.reply_text('You have not set up your quick add settings for others yet, please do so by typing /config')
+        return ConversationHandler.END
     else: 
         context.user_data['payment'] = setting_list[0]      
         context.user_data['category'] = setting_list[1]
