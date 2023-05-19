@@ -61,7 +61,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                             '1. Go over to xxx.\n'+
                                             '2. Go to File > Make a copy\n'+
                                             '3. Go to File > Share > Share with others\n'+
-                                            '4. Add tele-finance-tracker-services@tele-finance-tracker.iam.gserviceaccount.com as an editor\n'+
+                                            '4. Add xxx@iam.gserviceaccount.com as an editor\n'+
                                             '5. Copy your Google Sheet URL and send it over\n'+
                                             'Example: https://docs.google.com/spreadsheets/d/abcd1234/edit\n')
             return SET_UP
@@ -101,7 +101,7 @@ async def reset_up(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
                                         '1. Go over to xxx.\n'+
                                         '2. Go to File > Make a copy\n'+
                                         '3. Go to File > Share > Share with others\n'+
-                                        '4. Add tele-finance-tracker-services@tele-finance-tracker.iam.gserviceaccount.com as an editor\n'+
+                                        '4. Add xxx@iam.gserviceaccount.com as an editor\n'+
                                         '5. Copy your Google Sheet URL and send it over\n'+
                                         'Example: https://docs.google.com/spreadsheets/d/abcd1234/edit\n')
         return SET_UP
@@ -136,7 +136,7 @@ async def config_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                                         '1. Go over to xxx.\n'+
                                         '2. Go to File > Make a copy\n'+
                                         '3. Go to File > Share > Share with others\n'+
-                                        '4. Add tele-finance-tracker-services@tele-finance-tracker.iam.gserviceaccount.com as an editor\n'+
+                                        '4. Add xxx@iam.gserviceaccount.com as an editor\n'+
                                         '5. Copy your Google Sheet URL and send it over\n'+
                                         'Example: https://docs.google.com/spreadsheets/d/abcd1234/edit\n')
         return SET_UP
