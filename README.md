@@ -65,7 +65,9 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 ## Contact
 
 Bruce Wang: hello@brucewzj.com
+
 LinkedIn: [https://www.linkedin.com/in/brucewzj/](https://www.linkedin.com/in/brucewzj/)
+
 Project Link: [https://github.com/brucewzj99/tele-tracker](https://github.com/brucewzj99/tele-tracker)
 
 
