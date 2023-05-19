@@ -4,8 +4,9 @@ A python telegram bot to help track daily expenses onto google sheet
 ## Getting Started (Users)
 1. Access the bot on [telegram](https://t.me/telefinance_tracker_bot) 
 2. Use the /start command and follow the instructions given.
-3. Remember to edit the `Dropdown` sheet on Google Sheet to get started.
-4. Happy using!
+4. Remember to edit the `Dropdown` sheet on Google Sheet to get started.
+![image](https://github.com/brucewzj99/tele-tracker/assets/24997286/ddf879be-69f4-4e33-a517-3b5628055e6f)
+5. Happy using!
 
 ## Getting Started (Developers)
 ### Prerequisites
