@@ -426,10 +426,12 @@ async def log_transaction(user_data, update):
         google_sheet.update_prev_day(sheet_id, month, first_row)
         if day == 1:
             new_row = 5
-            google_sheet.update_rows(sheet_id, 1, new_row)
+            first_row = 6
+            google_sheet.update_rows(sheet_id, 1, new_row, first_row)
         else:
             new_row = google_sheet.get_new_row(sheet_id, month)
-            google_sheet.update_rows(sheet_id, day, new_row) 
+            first_row = new_row + 1
+            google_sheet.update_rows(sheet_id, day, new_row, first_row) 
         if update.callback_query and update.callback_query.message:
             await update.callback_query.message.reply_text(msg)
         elif update.message:

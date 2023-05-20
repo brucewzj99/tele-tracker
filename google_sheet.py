@@ -132,8 +132,8 @@ def get_trackers(sheet_id):
     values = result.get('values', [])
     return values[0]
 
-def update_rows(sheet_id, day, new_row):
-    values = [[day] + [new_row] * 3]  # Create a row with the same value repeated 3 times
+def update_rows(sheet_id, day, new_row, first_row):
+    values = [[day] + [new_row] * 2 + [first_row]]  
     range_name = 'Tracker!B3:E3'
     body = {'values': values}
     request = sheets_api.spreadsheets().values().update(
