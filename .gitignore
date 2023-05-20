@@ -1,0 +1,6 @@
+__pycache__
+/.env
+/app.yaml
+/accounts
+/.gcloudignore
+/app.log

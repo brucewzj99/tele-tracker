@@ -28,23 +28,29 @@ python3 main.py
 ```
 
 ## Usage
-/start - Start bot and configure your google sheet
+/start - Start the bot and configure your Google Sheet for tracking expenses and other entries.
 
-/config - To update your google sheet, or configure quick settings for /addtransports and /addothers
+/config - Update your Google Sheet settings or configure quick settings for adding transport and other entries.
 
-/addentry - To add new entry
+/addentry - Add a new entry to your expense tracking system.
 
-/addtranports - To quickly add new transport entry
+/addtransports - Quickly add a new transport entry to your expense tracker.
 
-/addothers - To quickly add others entry
+/addothers - Quickly add another type of entry to your expense tracker.
 
-/cancel - To cancel previous conversation with bot
+/cancel - Cancel the previous conversation with the bot and start fresh.
+
+/help - Show help message
 
 ## Planned Features
 1. More options for /addothers
 2. Retrieve your last few transaction
-4. Use webhook instead of polling
-5. Host onto serverless function
+3. /addincome
+4. Recurring transaction
+5. Budgeting notification
+6. Reminders
+7. Use webhook instead of polling
+8. Host onto serverless function
 
 ## Contributing
 

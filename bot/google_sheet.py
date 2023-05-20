@@ -1,7 +1,6 @@
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
-from common import EntryType
-import datetime as dt
+from bot.common import EntryType
 
 # Path to the downloaded JSON key file
 SERVICE_ACCOUNT_FILE = 'accounts/service_account.json'
@@ -12,7 +11,7 @@ sheets_api = build('sheets', 'v4', credentials=creds)
 # Dropdown range
 transport_range = ["Dropdown!A3:A9"]
 others_sub_range = [f"Dropdown!{chr(i)}2:{chr(i)}9" for i in range(ord('B'), ord('K'))]
-others_main_range = ["Dropdown!A2:J2"]
+others_main_range = ["Dropdown!B2:J2"]
 payment_sub_range = [f"Dropdown!{chr(i)}12:{chr(i)}19" for i in range(ord('A'), ord('K'))]
 payment_main_range = ["Dropdown!A12:J12"]
 

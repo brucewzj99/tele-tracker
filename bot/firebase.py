@@ -1,6 +1,4 @@
-from firebase_config import db
-import datetime as dt
-from common import EntryType
+from bot.firebase_config import db
 
 # new user setup
 def new_user_setup(telegram_id, sheet_id):
