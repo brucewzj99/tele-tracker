@@ -29,7 +29,11 @@ logger = lg.setup_logger()
 timezone = pytz.timezone('Asia/Singapore')
 
 # States
-SET_UP, RESET_UP, CONFIG__HANDLER, START_DESTINATION, ENTRY, PRICE, REMARKS, CATEGORY, SUBCATEGORY, PAYMENT, SUBPAYMENT, QUICK_ADD, CONFIG_SETUP, CONFIG_CATEGORY, CONFIG_SUBCATEGORY, CONFIG_PAYMENT, CONFIG_SUBPAYMENT = range(17)
+SET_UP, RESET_UP, CONFIG__HANDLER, START_DESTINATION, ENTRY, PRICE, REMARKS, CATEGORY, SUBCATEGORY, \
+PAYMENT, SUBPAYMENT, QUICK_ADD, QUICK_ADD_CATEGORY, CONFIG_SETUP, CONFIG_CATEGORY, CONFIG_SUBCATEGORY, \
+CONFIG_PAYMENT, CONFIG_SUBPAYMENT, HANDLE_RETRIEVE_TRANSACTION, INCOME, WORK_PLACE, CPF = (
+    range(22)
+)
 
 # Create inline markup based on list of strings
 def create_inline_markup(list):
@@ -44,6 +48,14 @@ def is_valid_price(price):
     # the regex pattern
     pattern = r"^\d{0,10}(\.\d{0,2})?$"
     return bool(re.match(pattern, price))
+
+# Check if month is valid
+def check_date_format(date_string):
+    pattern = r"\b\d{1,2}\s(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b"
+    day, month = date_string.split()
+    month = month.capitalize()
+    camel_cased_date = f"{day} {month}"
+    return bool(re.fullmatch(pattern, camel_cased_date))
 
 # Set up text
 async def setup_text():
@@ -89,7 +101,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return SET_UP
     except Exception as e:
             logger.error(f'function start:{e}')
-            print(e)
             await update.message.reply_text('There seems to be an error, please try again later.')
             return ConversationHandler.END
 
@@ -111,7 +122,6 @@ async def set_up(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             return ConversationHandler.END
         except Exception as e:
             logger.error(f'function set_up:{e}')
-            print(e)
             await update.message.reply_text('There seems to be an error linking your google sheet, please try again later.')
             return ConversationHandler.END
     else:
@@ -152,24 +162,38 @@ async def config_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return SET_UP
     else:
         try:
-            context.user_data['config'] = EntryType.OTHERS
             if reply == "Configure Quick Transport":
                 context.user_data['config'] = EntryType.TRANSPORT
-            msg = f'This is your current {context.user_data["config"].value} settings.\n'
-            # Retrieve current settings
-            setting_list = gs.get_quick_add_settings(context.user_data['sheet_id'], context.user_data['config'])
-            if setting_list == None:
-                msg = f'{msg}Default Payment: None\nDefault Type: None\n'
-            else:
-                msg = f'{msg}Default Payment: {setting_list[0]}\nDefault Type: {setting_list[1]}\n'
-            msg = f'{msg}Do you want to update it?'
-            await update.callback_query.message.reply_text(msg, reply_markup=create_inline_markup(["Yes", "No"]))
-            return CONFIG_SETUP
+                msg = f'This is your current Transport settings.\n'                
+                setting_list = gs.get_quick_add_settings(context.user_data['sheet_id'], context.user_data['config'])
+                # Retrieve current settings
+                if setting_list == None:
+                    msg = f'{msg}Default Payment: None\nDefault Type: None\n'
+                else:
+                    msg = f'{msg}Default Payment: {setting_list[0]}\nDefault Type: {setting_list[1]}\n'
+                msg = f'{msg}Do you want to update it?'
+                await update.callback_query.message.reply_text(msg, reply_markup=create_inline_markup(["Yes", "No"]))
+                return CONFIG_SETUP
+            
+            elif reply == "Configure Quick Others":
+                context.user_data['config'] = EntryType.OTHERS
+                msg = f'This is your current Others settings.\nClick on "Add new" to add a new one (max 5).\nIf you wish to update, you will have to do so manually in the "Tracker" sheet.\n\nPayment, Category\n'
+                setting_list = gs.get_quick_add_others(context.user_data["sheet_id"])
+                keyboard_list = []
+                if setting_list == None:
+                    msg = f'{msg}No settings found\n'
+                else:
+                    for setting in setting_list:
+                        msg = f'{msg}{setting}\n'
+                if(len(setting_list)<5):
+                    keyboard_list.append("Add new")
+                keyboard_list.append("Cancel")
+                await update.callback_query.message.reply_text(msg, reply_markup=create_inline_markup(keyboard_list))
+                return CONFIG_SETUP
         except Exception as e:
             logger.error(f'function config_handler:{e}')
             await update.callback_query.message.reply_text('There seems to be an error setting your configuration, please try again later.')
             return ConversationHandler.END
-
 
 # Quick add set up
 async def config_setup(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -177,7 +201,7 @@ async def config_setup(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     await update.callback_query.answer()
     config = context.user_data['config']
     try:
-        if reply == "Yes":
+        if reply == "Yes" or reply == "Add new":
             markup_list = gs.get_main_dropdown_value(context.user_data["sheet_id"], config)
             await update.callback_query.message.edit_text(f'Choose your default {config.value} type.', reply_markup=create_inline_markup(markup_list))
             return CONFIG_CATEGORY
@@ -256,7 +280,7 @@ async def config_subpayment(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     try:
         await update.callback_query.answer()
         await update.callback_query.edit_message_text(f'Payment type: {context.user_data["config-payment"]}', reply_markup=None)
-        gs.update_quick_add_settings(context.user_data['sheet_id'], context.user_data['config'], context.user_data['config-payment'], context.user_data['config-category'])
+        gs.update_quick_add_settings(context.user_data['sheet_id'], context.user_data['config'] ,context.user_data['config-payment'], context.user_data['config-category'])
         await update.callback_query.message.reply_text(f'Default {context.user_data["config"].value} settings updated.')
         return ConversationHandler.END
     except Exception as e:
@@ -519,11 +543,18 @@ async def add_others(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if setting_list is None or setting_list[0] is None:
         await update.message.reply_text('You have not set up your quick add settings for others yet, please do so by typing /config')
         return ConversationHandler.END
-    else: 
-        context.user_data['payment'] = setting_list[0]      
-        context.user_data['category'] = setting_list[1]
-        await update.message.reply_text(f'Quick Add Others\nDefault Payment: {setting_list[0]}\nDefault Type: {setting_list[1]}'+
-                                    '\n\nPlease enter as follow: [price],[remarks]\n e.g. 19.99, New shirt')
+    else:
+        setting_list = gs.get_quick_add_others(context.user_data["sheet_id"])
+        await update.message.reply_text("Quick Add Others, please choose your category.", reply_markup=create_inline_markup(setting_list))
+    return QUICK_ADD_CATEGORY
+
+# quick add category
+async def quick_add_category(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    reply = update.callback_query.data
+    context.user_data['payment'], context.user_data['category'] = reply.split(",")
+    await update.callback_query.answer()
+    await update.callback_query.edit_message_text(f'Quick Add Others\nDefault Payment: {context.user_data["payment"]}\nDefault Type: {context.user_data["category"]}'+
+                                    '\n\nPlease enter as follow: [price],[remarks]\n e.g. 19.99, New shirt', reply_markup=None)
     return QUICK_ADD
 
 # add in entry
@@ -544,44 +575,183 @@ async def quick_add(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         await update.message.reply_text("Please follow the format and try again.")
         return QUICK_ADD
 
-# help messaghe
+# help message
 async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = ("To get started, please type /start\n" + "Remember to configure your Dropdown sheet to get started on this bot.\n\n" + "To configure, type /config\n" + 
     "To add entry, type /addentry\n" + "To add transport quickly, type /addtransport\n" + "To add others quickly, type /addothers\n")
     await update.message.reply_text(msg)
 
+# ask to retrieve transaction
+async def retrieve_transaction(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data.clear()
+    telegram_id = update.effective_user.id
+    try:
+        context.user_data["sheet_id"]=db.get_user_sheet_id(telegram_id)
+        await update.message.reply_text(f"Please specify the date and month you wish to retrieve from in this format: DD MMM\ne.g 16 Mar\nor use /cancel to exit")
+        return HANDLE_RETRIEVE_TRANSACTION
+    except Exception as e:
+            logger.error(f'function retrieve_transaction:{e}')
+            await update.message.reply_text('There seems to be an error, please try again later.')
+            return ConversationHandler.END
+    
+# handle retrieve transaction
+async def handle_retrieve_transaction(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    sheet_id = context.user_data["sheet_id"]
+    reply = update.message.text
+    msg = "Please specify the date and month you wish to retrieve from in this format: DD MMM\ne.g 16 Mar\nor use /cancel to exit"
+    try:
+        if check_date_format(reply):
+            day, month = reply.split(' ')
+            total_spend, transport_values, other_values = gs.retrieve_transaction(sheet_id, month, day)
+            if not total_spend :
+                total_spend = "To be determine"
+            else:
+                total_spend = total_spend[0][0]
+            msg = f"Transaction for {day} {month}\nTotal Spending: {total_spend}\n----TRANSPORT----\n"
+            for transport in transport_values:
+                msg=f"{msg}{transport}\n"
+                
+            msg = f"{msg}\n----OTHERS----\n"
+            for other in other_values:
+                msg=f"{msg}{other}\n"
+            
+            await update.message.reply_text(msg)
+            return ConversationHandler.END
+        else:
+            await update.message.reply_text(msg)
+            return HANDLE_RETRIEVE_TRANSACTION
+            
+    except Exception as e:
+        logger.error(f'function handle_retrieve_transaction:{e}')
+        await update.message.reply_text(f"The date you enter doesn't exist in your Google sheet.\n\n{msg}")
+            
+# add income
+async def add_income(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data.clear()
+    telegram_id = update.effective_user.id
+    try:
+        context.user_data["sheet_id"]=db.get_user_sheet_id(telegram_id)
+        await update.message.reply_text("Add income\nPlease state your income followed by any remarks: [income],[remarks]\ne.g. 2000, Something")
+    except Exception as e:
+        logger.error(f'function add_income:{e}')
+        await update.message.reply_text("Can't seem to retrieve others information, please try again later.")
+        return ConversationHandler.END
+    return INCOME
+
+async def income(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    reply = update.message.text
+    income = ""
+    remarks = ""
+    if ',' in reply:
+        income, remarks = reply.split(',')
+    else:
+        if is_valid_price(income):
+            income = reply
+        else:
+            await update.message.reply_text("Please follow this format: [income],[remarks]\ne.g. 2000, Something")
+            return INCOME
+    context.user_data['income'] = income.strip()
+    context.user_data['remarks'] = remarks.strip()
+    try:
+        sheet_id = context.user_data["sheet_id"]
+        work_list = gs.get_work_place(sheet_id)
+        await update.message.reply_text("Choose your source of income", reply_markup=create_inline_markup(work_list))
+        return WORK_PLACE
+    except Exception as e:
+        logger.error(f'function income:{e}')
+        await update.message.reply_text('There seems to be an error, please try again later.')
+        return ConversationHandler.END
+
+async def work_place(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    place = update.callback_query.data
+    context.user_data['place'] = place
+    await update.callback_query.answer()
+    await update.callback_query.message.edit_text(f'Place: {place}', reply_markup=None)
+    await update.callback_query.message.reply_text('Is there CPF?', reply_markup=create_inline_markup(["Yes", "No"]))
+    return CPF
+
+async def cpf(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    cpf = update.callback_query.data
+    income = context.user_data['income']
+    remarks = context.user_data['remarks']
+    place = context.user_data['place']
+    sheet_id = context.user_data['sheet_id']
+    await update.callback_query.answer()
+    await update.callback_query.message.edit_text(f'CPF: {cpf}', reply_markup=None)
+    try:
+        row_data = [income, place, cpf, remarks]
+        current_datetime = dt.datetime.now(timezone)
+        month = current_datetime.strftime('%B')
+        if gs.update_income(sheet_id, month, row_data):
+            await update.callback_query.message.reply_text('Income has been added!')
+        else:
+            await update.callback_query.message.reply_text('You have exceed the number of income allowed!')
+        return ConversationHandler.END
+    except Exception as e:
+        logger.error(f'function cpf:{e}')
+        await update.callback_query.message.reply_text('There seems to be an error, please try again later.')
+        return ConversationHandler.END
+        
 
 def run_telegram_bot():
     print ("Starting telegram bot...")
     application = Application.builder().token(BOT_TOKEN).build()
 
+    # Configuration-related states and handlers
+    config_states = {
+        CONFIG__HANDLER: [CallbackQueryHandler(config_handler)],
+        CONFIG_SETUP: [CallbackQueryHandler(config_setup)],
+        CONFIG_CATEGORY: [CallbackQueryHandler(config_category)],
+        CONFIG_SUBCATEGORY: [CallbackQueryHandler(config_subcategory)],
+        CONFIG_PAYMENT: [CallbackQueryHandler(config_payment)],
+        CONFIG_SUBPAYMENT: [CallbackQueryHandler(config_subpayment)],
+    }
+
+    # Entry-related states and handlers
+    entry_states = {
+        ENTRY: [CallbackQueryHandler(entry)],
+        PRICE: [MessageHandler(filters.TEXT & ~filters.COMMAND, price)],
+        REMARKS: [MessageHandler(filters.TEXT & ~filters.COMMAND, remarks)],
+        CATEGORY: [CallbackQueryHandler(category)],
+        SUBCATEGORY: [CallbackQueryHandler(subcategory)],
+        PAYMENT: [CallbackQueryHandler(payment)],
+        SUBPAYMENT: [CallbackQueryHandler(subpayment)],
+    }
+
+    # Quick add-related states and handlers
+    quick_add_states = {
+        QUICK_ADD: [MessageHandler(filters.TEXT & ~filters.COMMAND, quick_add)],
+        QUICK_ADD_CATEGORY: [CallbackQueryHandler(quick_add_category)],
+    }
+
+    # Retrieve transaction-related states and handlers
+    retrieve_transaction_states = {
+        HANDLE_RETRIEVE_TRANSACTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_retrieve_transaction)],
+    }
+
+    add_income_states = {
+        INCOME: [MessageHandler(filters.TEXT & ~filters.COMMAND, income)],
+        WORK_PLACE: [CallbackQueryHandler(work_place)],
+        CPF: [CallbackQueryHandler(cpf)],
+        
+    }
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start),
-                      CommandHandler('config', config),
-                      CommandHandler('addentry', add_entry),
-                      CommandHandler('addtransport', add_transport),
-                      CommandHandler('addothers', add_others)],
-        
+                    CommandHandler('config', config),
+                    CommandHandler('addentry', add_entry),
+                    CommandHandler('addtransport', add_transport),
+                    CommandHandler('addothers', add_others),
+                    CommandHandler('addincome', add_income),
+                    CommandHandler('retrievetransaction', retrieve_transaction)],
+            
         states={
             SET_UP: [MessageHandler(filters.TEXT & ~filters.COMMAND, set_up)],
             RESET_UP: [CallbackQueryHandler(reset_up)],
-            # Config stuff
-            CONFIG__HANDLER: [CallbackQueryHandler(config_handler),],
-            CONFIG_SETUP: [CallbackQueryHandler(config_setup),],
-            CONFIG_CATEGORY: [CallbackQueryHandler(config_category)],
-            CONFIG_SUBCATEGORY: [CallbackQueryHandler(config_subcategory)],
-            CONFIG_PAYMENT: [CallbackQueryHandler(config_payment)],
-            CONFIG_SUBPAYMENT: [CallbackQueryHandler(config_subpayment)],
-            # Add entry stuff
-            ENTRY: [CallbackQueryHandler(entry)],
-            PRICE: [MessageHandler(filters.TEXT & ~filters.COMMAND, price)],
-            REMARKS: [MessageHandler(filters.TEXT & ~filters.COMMAND, remarks)],
-            CATEGORY: [CallbackQueryHandler(category)],
-            SUBCATEGORY: [CallbackQueryHandler(subcategory)],
-            PAYMENT: [CallbackQueryHandler(payment)],
-            SUBPAYMENT: [CallbackQueryHandler(subpayment)],
-            # Quick add stuff
-            QUICK_ADD: [MessageHandler(filters.TEXT & ~filters.COMMAND, quick_add)],
+            **config_states,
+            **entry_states,
+            **quick_add_states,
+            **retrieve_transaction_states,
+            **add_income_states,
         },
         fallbacks=[CommandHandler("cancel", cancel)],
     )

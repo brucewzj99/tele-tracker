@@ -9,13 +9,14 @@ creds = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FI
 sheets_api = build('sheets', 'v4', credentials=creds)
 
 # Dropdown range
-transport_range = ["Dropdown!A3:A9"]
+transport_range = "Dropdown!A3:A9"
 others_sub_range = [f"Dropdown!{chr(i)}2:{chr(i)}9" for i in range(ord('B'), ord('K'))]
-others_main_range = ["Dropdown!B2:J2"]
+others_main_range = "Dropdown!B2:J2"
 payment_sub_range = [f"Dropdown!{chr(i)}12:{chr(i)}19" for i in range(ord('A'), ord('K'))]
-payment_main_range = ["Dropdown!A12:J12"]
+payment_main_range = "Dropdown!A12:J12"
+quick_others_range = 'Tracker!I3:J13'
+income_range = 'Dropdown!L2:L9'
 
-# Get the main dropdown values
 def get_main_dropdown_value(sheet_id, entry_type):
     range = []
     if entry_type == EntryType.TRANSPORT:
@@ -25,24 +26,22 @@ def get_main_dropdown_value(sheet_id, entry_type):
     else:
         range = payment_main_range
     # Make the request
-    results = sheets_api.spreadsheets().values().batchGet(
+    results = sheets_api.spreadsheets().values().get(
         spreadsheetId=sheet_id,
-        ranges=range).execute()
+        range=range).execute()
 
     # Get the values from the result
-    value_ranges = results.get('valueRanges', [])
-    
-    dropdown = []
-    for value in value_ranges:
-        dropdown.append(value.get('values', []))
+    values = results.get('values', [])
 
     if entry_type == EntryType.TRANSPORT:
-        new_list = list(dropdown[0])
-        flat_list = [item for sublist in new_list for item in sublist]
-        return flat_list
-    return dropdown[0][0]
+        results_list = []
+        for sublist in values:
+            for item in sublist:
+                results_list.append(item)
+        return results_list
 
-# Get the sub dropdown values
+    return values[0]
+
 def get_sub_dropdown_value(sheet_id, main_value, entry_type):
     range = []
     if entry_type == EntryType.OTHERS:
@@ -67,7 +66,6 @@ def get_sub_dropdown_value(sheet_id, main_value, entry_type):
     flat_list = [item for sublist in dropdown[0] for item in sublist]
     return flat_list
 
-# Sum up previous day
 def update_prev_day(sheet_id, month, first_row):
     last_row = get_new_row(sheet_id, month)
     # Write the message to the Google Sheet
@@ -79,7 +77,6 @@ def update_prev_day(sheet_id, month, first_row):
         valueInputOption='USER_ENTERED',
         body=body).execute()
 
-# Get new row no in sheets
 def get_new_row(sheet_id, month):
     result = sheets_api.spreadsheets().values().get(
             spreadsheetId=sheet_id,
@@ -87,7 +84,6 @@ def get_new_row(sheet_id, month):
     values = result.get('values', [])
     return len(values)
 
-# Enter new date into cell
 def create_date(sheet_id, day, month, first_row):
     # Update date in column A
     body = {'values': [[day]]}
@@ -98,7 +94,6 @@ def create_date(sheet_id, day, month, first_row):
     valueInputOption='USER_ENTERED',
     body=body).execute()
 
-# create new entry into google sheet
 def create_entry(sheet_id, month, row_tracker, row_data):
     entry_type = row_data[0]
     price = row_data[1].strip()
@@ -143,7 +138,6 @@ def update_rows(sheet_id, day, new_row, first_row):
     )
     request.execute()
 
-
 def row_incremental(sheet_id, entry_type):
     range_name = 'Tracker!B3:E3'
     response = sheets_api.spreadsheets().values().get(
@@ -169,7 +163,7 @@ def row_incremental(sheet_id, entry_type):
         ).execute()
 
 def get_quick_add_settings(sheet_id, entry_type):
-    range_name = 'Tracker!G3:J3'  # Replace with the desired range in your Google Sheet
+    range_name = 'Tracker!G3:J3'  
     response = sheets_api.spreadsheets().values().get(
         spreadsheetId=sheet_id,
         range=range_name,
@@ -190,42 +184,96 @@ def get_quick_add_settings(sheet_id, entry_type):
     return None
 
 def update_quick_add_settings(sheet_id, entry_type, payment, type):
-    range_name = 'Tracker!G3:J3'  # Replace with the desired range in your Google Sheet
+    if entry_type == EntryType.TRANSPORT:
+        range_name = 'Tracker!G3:H3'
+    else:
+        last_row = sheets_api.spreadsheets().values().get(
+        spreadsheetId=sheet_id,
+        range='Tracker!I:J',
+        ).execute().get('values', [])
+        last_row = len(last_row) + 1
+        range_name = f'Tracker!I{last_row}:J{last_row}'
+    new_row = [payment, type]
+    body = {
+        'values': [new_row]
+    }
+    sheets_api.spreadsheets().values().update(
+    spreadsheetId=sheet_id,
+    range=range_name,
+    valueInputOption='USER_ENTERED',
+    body=body).execute()
 
-    # Get existing values from the range, or an empty list if the range is empty
+def get_quick_add_others(sheet_id):
+    range_name = quick_others_range
     response = sheets_api.spreadsheets().values().get(
         spreadsheetId=sheet_id,
-        range=range_name,
-        majorDimension='ROWS'
+        range=range_name
     ).execute()
 
-    values = response.get('values', [])  # Initialize with an empty list if no values are present
+    values = response.get('values', [])
+    others_list = []
+    for other in values:
+        merged_str = ', '.join(other)
+        others_list.append(merged_str)
+    return others_list
 
-    if not values:
-        values = [[]]  # Create an empty row if the range is empty
+def retrieve_transaction(sheet_id, month, date):
+    result = sheets_api.spreadsheets().values().get(
+            spreadsheetId=sheet_id,
+            range=f'{month}!A:A').execute()
+    values = result.get('values', [])
+    flat_list = [item for sublist in values for item in sublist or ['']]
 
-    if len(values) == 0:
-        values.append([])  # Add a row if the values list is empty
+    first_row = flat_list.index(date)
+    first_row += 1
+    last_row = flat_list.index(str(int(date) + 1)) if str(int(date) + 1) in flat_list else first_row + 10    
+    result = sheets_api.spreadsheets().values().batchGet(
+    spreadsheetId=sheet_id,
+    ranges=[f'{month}!B{first_row}', f'{month}!C{first_row}:G{last_row}', f'{month}!H{first_row}:K{last_row}']).execute()
+    value_ranges = result.get('valueRanges', [])
+    total_spend = value_ranges[0].get('values', []) if len(value_ranges) > 0 else []
+    transport_values = value_ranges[1].get('values', []) if len(value_ranges) > 0 else []
+    other_values = value_ranges[2].get('values', []) if len(value_ranges) > 1 else []
 
-    # Determine the number of columns needed
-    num_columns = max(4, len(values[0]))
+    return total_spend, transport_values, other_values
 
-    if len(values[0]) < num_columns:
-        values[0].extend([''] * (num_columns - len(values[0])))  # Extend the existing row with empty strings
+def get_work_place(sheet_id):
+    result = sheets_api.spreadsheets().values().get(
+            spreadsheetId=sheet_id,
+            range=income_range).execute()
+    values = result.get('values', [])
+    flattened_list = [item for sublist in values for item in sublist]
 
-    if entry_type == EntryType.TRANSPORT:
-        values[0][0] = payment if payment else ''
-        values[0][1] = type if type else ''
-    else:
-        values[0][2] = payment if payment else ''
-        values[0][3] = type if type else ''
+    return flattened_list
 
-    body = {'values': values}
+def update_income(sheet_id, month, row_data):
+    data_mo = row_data[:3] 
+    data_r = [row_data[-1]]  
+    body_mo = {'values': [data_mo]}
+    body_r = {'values': [data_r]}
+
+    result = sheets_api.spreadsheets().values().get(
+            spreadsheetId=sheet_id,
+            range=f'{month}!M5:M10').execute()
+    values = result.get('values', [])
+    last_row = len(values)+5
+    if last_row > 10:
+        return False
+
+    range_name_mo = f'{month}!M{last_row}:O{last_row}'
+    range_name_r = f'{month}!R{last_row}:R{last_row}'
     sheets_api.spreadsheets().values().update(
         spreadsheetId=sheet_id,
-        range=range_name,
+        range=range_name_mo,
         valueInputOption='USER_ENTERED',
-        body=body
+        body=body_mo
     ).execute()
 
+    body_r = {'values': [data_r]}
+    sheets_api.spreadsheets().values().update(
+        spreadsheetId=sheet_id,
+        range=range_name_r,
+        valueInputOption='USER_ENTERED',
+        body=body_r
+    ).execute()
     return True

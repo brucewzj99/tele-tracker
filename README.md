@@ -1,6 +1,17 @@
 # Tele-Tracker Bot
 A python telegram bot to help track daily expenses onto google sheet
 
+## Release Notes
+You can find the release notes over [here](https://github.com/brucewzj99/tele-tracker/blob/master/release_notes.md)
+
+## Table of Contents
+- [Getting Started (Users)](#getting-started-users)
+- [Getting Started (Developers)](#getting-started-developers)
+- [Usage](#usage)
+- [Contributing](#contributing)
+- [License](#license)
+- [Contact](#contact)
+
 ## Getting Started (Users)
 1. Access the bot on [telegram](https://t.me/telefinance_tracker_bot) 
 2. Use the /start command and follow the instructions given.
@@ -34,29 +45,22 @@ python3 main.py
 
 /addentry - Add a new entry to your expense tracking system.
 
-/addtransports - Quickly add a new transport entry to your expense tracker.
+/addtransport - Quickly add a new transport entry to your expense tracker.
 
 /addothers - Quickly add another type of entry to your expense tracker.
+
+/addincome - Add a new entry to your income.
+
+/retrievetransaction - Retrieve a transaction from past date.
 
 /cancel - Cancel the previous conversation with the bot and start fresh.
 
 /help - Show help message
 
-## Planned Features
-1. More options for /addothers
-2. Retrieve your last few transaction
-3. /addincome
-4. Recurring transaction
-5. Budgeting notification
-6. Reminders
-7. Use webhook instead of polling
-8. Host onto serverless function
-
 ## Contributing
-
 Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
 
-If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
+If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue or work on issues that are currently open.
 Don't forget to give the project a star! Thanks again!
 
 1. Fork the Project
@@ -66,17 +70,11 @@ Don't forget to give the project a star! Thanks again!
 5. Open a Pull Request
 
 ## License
-
 Distributed under the MIT License. See `LICENSE.txt` for more information.
 
-<!-- CONTACT -->
 ## Contact
-
 Bruce Wang: hello@brucewzj.com
 
 LinkedIn: [https://www.linkedin.com/in/brucewzj/](https://www.linkedin.com/in/brucewzj/)
 
 Project Link: [https://github.com/brucewzj99/tele-tracker](https://github.com/brucewzj99/tele-tracker)
-
-
-
